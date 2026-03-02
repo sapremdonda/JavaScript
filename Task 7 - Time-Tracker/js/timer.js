@@ -1,77 +1,56 @@
-// js/timer.js
+// timer logic
+import { getData, saveData } from './storage.js';
+import { addLog, formatDuration } from './logs.js';
 
 let timerInterval = null;
-let activeStartTime = null; // cache in memory for better performance
+let idleSeconds = 0;
+let onTickCallback = null;
+let onStopCallback = null;
 
-// reusable formatting function
-function formatDuration(totalSeconds) {
-    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-    const s = String(totalSeconds % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-}
+export const getActiveTimer = () => getData('active');
 
-function updateTimerDisplay() {
-    if (!activeStartTime) return;
+export const startTimer = (projectId, taskName) => {
+    const timerData = { projectId, taskName, startTime: Date.now() };
+    saveData('active', timerData);
+    idleSeconds = 0;
+    resumeTimer();
+};
 
-    // calculate elapsed time from memory instead of LocalStorage
-    const now = Date.now();
-    const elapsedSeconds = Math.floor((now - activeStartTime) / 1000);
+export const stopTimer = () => {
+    const active = getActiveTimer();
+    if (!active) return;
     
-    document.getElementById('timer-display').textContent = formatDuration(elapsedSeconds);
-}
-
-function startTimer(projectId, taskName) {
-    activeStartTime = Date.now(); // store in memory
+    addLog(active.projectId, active.taskName, active.startTime, Date.now());
+    saveData('active', null);
     
-    const newTimer = {
-        projectId: projectId,
-        taskName: taskName,
-        startTime: activeStartTime // store in LocalStorage
-    };
-    
-    Storage.setActiveTimer(newTimer);
-    
-    // UI updates
-    updateTimerDisplay(); 
-    timerInterval = setInterval(updateTimerDisplay, 1000);
-    
-    document.getElementById('btn-start-timer').classList.add('hidden');
-    document.getElementById('btn-stop-timer').classList.remove('hidden');
-    document.getElementById('active-timer-indicator').classList.remove('hidden');
-}
-
-function stopTimer() {
-    const activeTimer = Storage.getActiveTimer();
-    if (!activeTimer) return;
-
     clearInterval(timerInterval);
+    if (onStopCallback) onStopCallback();
+};
+
+export const resumeTimer = () => {
+    if (!getActiveTimer()) return;
+    clearInterval(timerInterval);
+    timerInterval = setInterval(tick, 1000);
+};
+
+export const setCallbacks = (onTick, onStop) => {
+    onTickCallback = onTick;
+    onStopCallback = onStop;
+};
+
+export const resetIdle = () => idleSeconds = 0;
+
+const tick = () => {
+    const active = getActiveTimer();
+    if (!active) return;
     
-    const endTime = Date.now();
-    const durationSeconds = Math.floor((endTime - activeTimer.startTime) / 1000);
+    idleSeconds++;
+    if (idleSeconds >= 300) { // 5 minutes idle
+        swal("Idle Detected", "We paused your timer due to 5 minutes of inactivity.", "warning");
+        stopTimer();
+        return;
+    }
 
-    // create log entry object
-    const newLog = {
-        id: Date.now().toString(), 
-        projectId: activeTimer.projectId,
-        taskName: activeTimer.taskName,
-        startTime: activeTimer.startTime,
-        endTime: endTime,
-        durationSeconds: durationSeconds,
-        notes: "" 
-    };
-
-    // save to logs array
-    const logs = Storage.getLogs();
-    logs.push(newLog);
-    Storage.saveLogs(logs);
-
-    Storage.clearActiveTimer();
-    activeStartTime = null; // clear memory cache
-    
-    // reset UI
-    document.getElementById('timer-display').textContent = "00:00:00";
-    document.getElementById('btn-start-timer').classList.remove('hidden');
-    document.getElementById('btn-stop-timer').classList.add('hidden');
-    document.getElementById('active-timer-indicator').classList.add('hidden');
-}
+    const elapsedSeconds = Math.floor((Date.now() - active.startTime) / 1000);
+    if (onTickCallback) onTickCallback(formatDuration(elapsedSeconds), active);
+};
