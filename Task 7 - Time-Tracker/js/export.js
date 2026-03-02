@@ -1,39 +1,33 @@
-// js/export.js
+// csv export logic
+import { getLogs, formatDuration } from './logs.js';
+import { getProjectById } from './projects.js';
 
-function exportToCSV() {
-    const logs = Storage.getLogs();
-    const projects = Storage.getProjects();
-    
+export const exportToCSV = () => {
+    const logs = getLogs();
     if (logs.length === 0) {
-        const errorEl = document.getElementById('export-error');
-        errorEl.textContent = "No logs to export!";
-        errorEl.style.display = 'block';
-        setTimeout(() => { errorEl.style.display = 'none'; }, 3000);
+        swal("Empty", "No data to export", "info");
         return;
     }
 
-    // build the CSV Header
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Date,Project,Task,Duration,Notes\n";
-
-    // loop through logs and add rows
-    logs.forEach(log => {
+    const headers = "Date,Project,Task,Duration,Notes\n";
+    const rows = logs.map(log => {
+        const p = getProjectById(log.projectId);
+        const pName = p ? p.name.replace(/"/g, '""') : 'Unknown';
+        const tName = log.taskName.replace(/"/g, '""');
+        const notes = (log.notes || '').replace(/"/g, '""');
         const date = new Date(log.startTime).toLocaleDateString();
-        const project = projects.find(p => p.id === log.projectId);
-        const projectName = project ? `"${project.name}"` : '"Deleted Project"'; 
-        const taskName = `"${log.taskName}"`; // quotes handle commas in user input
-        const duration = formatDuration(log.durationSeconds);
-        const notes = `"${log.notes}"`;
-
-        csvContent += `${date},${projectName},${taskName},${duration},${notes}\n`;
+        const dur = formatDuration(log.durationSeconds);
+        return `"${date}","${pName}","${tName}","${dur}","${notes}"`;
     });
 
-    // trigger Download (Browser-native file API)
+    const csvContent = "data:text/csv;charset=utf-8," + headers + rows.join('\n');
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "time_tracker_logs.csv");
+    const link = document.createElement('a');
+    
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `time_logs_${new Date().toISOString().slice(0,10)}.csv`);
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-}
+};
