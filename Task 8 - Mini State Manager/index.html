@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini State Manager</title>
+    <link id="theme-stylesheet" rel="stylesheet" href="light-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header>
+            <h1><i class="fa-solid fa-list-check"></i> Task Manager</h1>
+            <div class="stats" id="dashboard-stats">
+                </div>
+            <div class="controls">
+                <input type="text" id="search-input" placeholder="Search tasks...">
+                <select id="sort-select">
+                    <option value="createdAt">Sort by Date</option>
+                    <option value="priority">Sort by Priority</option>
+                </select>
+                <button id="undo-btn" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
+                <button id="redo-btn" title="Redo"><i class="fa-solid fa-rotate-right"></i></button>
+                <button id="export-btn" title="Export to JSON"><i class="fa-solid fa-file-export"></i></button>
+                <button id="import-btn" title="Import from JSON"><i class="fa-solid fa-file-import"></i></button>
+                <input type="file" id="import-file" accept=".json" style="display: none;">
+                <button id="theme-toggle" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
+            </div>
+        </header>
+
+        <form id="task-form" novalidate>
+            <div class="form-group">
+                <input type="text" id="task-title" placeholder="Task Title (e.g., Fix Bug)">
+                <span class="inline-error" id="title-error"></span>
+            </div>
+            <div class="form-group">
+                <select id="task-priority">
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                </select>
+            </div>
+            <button type="submit"><i class="fa-solid fa-plus"></i> Add Task</button>
+        </form>
+
+        <div class="kanban-board">
+            <div class="column" data-status="pending" id="col-pending">
+                <h3>Pending</h3>
+                <div class="task-list"></div>
+            </div>
+            <div class="column" data-status="in-progress" id="col-in-progress">
+                <h3>In Progress</h3>
+                <div class="task-list"></div>
+            </div>
+            <div class="column" data-status="completed" id="col-completed">
+                <h3>Completed</h3>
+                <div class="task-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
